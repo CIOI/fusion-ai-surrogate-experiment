@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A controlled physics-guided surrogate-model experiment using ITER-like equilibrium simulation data." />
+    <title>Fusion AI Surrogate Experiment</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <p class="eyebrow">Fusion-AI experiment report</p>
+        <h1>데이터 기반 baseline에서<br />제어된 physics loss까지</h1>
+        <p class="lede">공개 synthetic simulation data를 사용한 ITER-like plasma-equilibrium reconstruction 실험입니다. extra input의 효과와 physics loss의 효과를 분리하고, validation data만으로 constraint weight를 선택했습니다.</p>
+        <p class="protocol">8,192 synthetic equilibria <b>•</b> 80 / 10 / 10 split <b>•</b> Validation-based early stopping</p>
+      </header>
+
+      <section class="experiment-grid" aria-label="Model experiments">
+        <article class="experiment-card baseline">
+          <p class="card-topline">Experiment 01</p>
+          <h2>Magnetic-only MLP</h2>
+          <ul><li>14개 coil current + 187개 magnetic measurement</li><li>Fixed-grid MLP decoder</li><li>Flux-map MSE loss</li></ul>
+          <img src="assets/videos/magnetic_only.gif" alt="Magnetic-only MLP training progression" />
+          <dl><div><dt>Test RMSE</dt><dd>0.1365</dd></div><div><dt>Test R²</dt><dd>0.99963</dd></div><div><dt>Best epoch</dt><dd>33</dd></div></dl>
+        </article>
+        <article class="experiment-card ablation">
+          <p class="card-topline">Experiment 02</p>
+          <h2>Magnetic + pressure MLP</h2>
+          <ul><li>101-point pressure profile 추가</li><li>동일한 split, optimizer, early-stopping rule</li><li>추가 internal information의 효과 확인</li></ul>
+          <img src="assets/videos/magnetic_plus_pressure.gif" alt="Magnetic plus pressure MLP training progression" />
+          <dl><div><dt>Test RMSE</dt><dd>0.1585</dd></div><div><dt>Test R²</dt><dd>0.99950</dd></div><div><dt>Best epoch</dt><dd>19</dd></div></dl>
+        </article>
+        <article class="experiment-card prototype">
+          <p class="card-topline">Experiment 03 <span>선정하지 않음</span></p>
+          <h2>Naive physics residual</h2>
+          <ul><li>Flux loss + Grad–Shafranov residual, λ = 0.1</li><li>Experiment 02와 동일한 input</li><li>제약이 flux accuracy를 과도하게 저해해 제외</li></ul>
+          <img src="assets/videos/physics_guided.gif" alt="Naive physics residual training progression" />
+          <dl><div><dt>Test RMSE</dt><dd>3.9272</dd></div><div><dt>Test R²</dt><dd>0.69125</dd></div><div><dt>Best epoch</dt><dd>148</dd></div></dl>
+        </article>
+      </section>
+
+      <section class="sweep">
+        <div class="sweep-heading"><div><p class="eyebrow">Controlled redesign</p><h2>input은 고정하고, physics-loss weight만 sweep했습니다.</h2></div><p>모든 candidate는 14개 coil current, 187개 magnetic measurement, 101-point pressure profile을 사용했습니다. 바꾼 변수는 Grad–Shafranov weight λ뿐입니다.</p></div>
+        <img class="tradeoff" src="assets/validation_tradeoff.png" alt="Validation trade-off across physics-loss weights" />
+        <div class="sweep-grid"><div><span>λ = 0, control</span><strong>0.1550</strong><p>Validation flux RMSE</p><b>53.47</b><p>Normalized G–S MSE</p></div><div class="selected"><span>λ = 1e-5, selected</span><strong>0.1424</strong><p>Validation flux RMSE</p><b>12.45</b><p>Normalized G–S MSE</p></div><div><span>Selected held-out test</span><strong>0.1426</strong><p>Flux RMSE</p><b>12.65</b><p>Normalized G–S MSE</p></div></div>
+        <p class="sweep-note">선정 규칙: λ = 0 validation flux RMSE보다 2% 이내인 candidate 중 validation physics residual이 가장 낮은 모델을 선택했습니다. λ = 3e-5는 flux RMSE가 더 낮았지만 residual이 높아, test evaluation 전에 λ = 1e-5를 선택했습니다.</p>
+      </section>
+
+      <section class="takeaway"><div><p class="eyebrow">What the experiment established</p><h2>먼저 단순하게 시작하고, 근거가 있을 때만 domain knowledge를 추가합니다.</h2></div><div><p>초기 held-out 비교에서는 Magnetic-only MLP가 가장 낮은 RMSE를 보였습니다. 같은 protocol에서 pressure profile만 추가하는 것은 이 compact model의 성능을 높이지 못했습니다.</p><p>초기 λ = 0.1 residual은 flux accuracy를 저해했습니다. input을 고정하고 validation data로 λ를 선택한 뒤, λ = 1e-5는 pressure-control validation RMSE와 normalized physics residual을 함께 개선했습니다. 이는 모든 baseline을 이겼다는 주장이 아니라, 조건을 통제한 비교에서의 개선입니다.</p></div></section>
+
+      <section class="method"><b>Method</b><p>Physics simulation data <i>→</i> Baseline <i>→</i> Controlled ablation <i>→</i> Physics diagnostic <i>→</i> Evidence-based next step</p></section>
+      <footer><p>Source dataset: ITER-like equilibrium sample. PlaNet (Bonotto, Abate &amp; Pigatto, 2024)을 참고했습니다.</p><p>Scope: 재현 가능한 surrogate-model prototype입니다. PlaNet의 완전한 재현, production digital twin, 실험 장비 검증은 아닙니다.</p></footer>
+    </main>
+  </body>
+</html>
